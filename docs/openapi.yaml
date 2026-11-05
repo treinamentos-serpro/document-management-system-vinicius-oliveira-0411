@@ -1,0 +1,183 @@
+openapi: 3.0.3
+info:
+  title: Document Management System API
+  version: 1.0.0
+  description: API para envio, listagem e download de documentos.
+servers:
+  - url: /
+    description: Servidor da aplicação
+tags:
+  - name: Health
+    description: Verificação de disponibilidade
+  - name: Documents
+    description: Operações de documentos
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Verifica a disponibilidade da API
+      responses:
+        '200':
+          description: API disponível
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+              example:
+                status: ok
+  /upload:
+    post:
+      tags:
+        - Documents
+      summary: Envia um documento
+      description: O arquivo é armazenado no filesystem local da aplicação.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Arquivo a ser enviado.
+                owner:
+                  type: string
+                  description: Dono do documento. Assume `anonymous` quando ausente ou vazio.
+                  example: maria.silva
+      responses:
+        '201':
+          description: Documento criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+              example:
+                id: 8f2f1174-ec15-4f4d-bff6-b9532efc97b1
+                originalName: relatorio.pdf
+                size: 24576
+                uploadedAt: '2026-11-05T12:00:00.000Z'
+                owner: maria.silva
+        '400':
+          description: Nenhum arquivo foi enviado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Nenhum arquivo foi enviado.
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /documents:
+    get:
+      tags:
+        - Documents
+      summary: Lista os documentos
+      responses:
+        '200':
+          description: Lista de documentos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Document'
+              example:
+                - id: 8f2f1174-ec15-4f4d-bff6-b9532efc97b1
+                  originalName: relatorio.pdf
+                  size: 24576
+                  uploadedAt: '2026-11-05T12:00:00.000Z'
+                  owner: maria.silva
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /documents/{id}/download:
+    get:
+      tags:
+        - Documents
+      summary: Baixa um documento
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Identificador UUID do documento
+          schema:
+            type: string
+            format: uuid
+          example: 8f2f1174-ec15-4f4d-bff6-b9532efc97b1
+      responses:
+        '200':
+          description: Arquivo do documento
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Documento não encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Documento não encontrado.
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+components:
+  schemas:
+    Document:
+      type: object
+      required:
+        - id
+        - originalName
+        - size
+        - uploadedAt
+        - owner
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 8f2f1174-ec15-4f4d-bff6-b9532efc97b1
+        originalName:
+          type: string
+          example: relatorio.pdf
+        size:
+          type: integer
+          format: int64
+          description: Tamanho do arquivo em bytes.
+          example: 24576
+        uploadedAt:
+          type: string
+          format: date-time
+          example: '2026-11-05T12:00:00.000Z'
+        owner:
+          type: string
+          example: maria.silva
+    HealthStatus:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          example: ok
+    Error:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          example: Documento não encontrado.
+  responses:
+    InternalServerError:
+      description: Erro interno do servidor
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: Erro interno do servidor.

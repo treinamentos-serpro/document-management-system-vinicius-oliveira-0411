@@ -10,6 +10,8 @@
 // usando multer com diskStorage. Não utilize provedores externos.
 
 const express = require('express');
+const path = require('node:path');
+const swaggerUi = require('swagger-ui-express');
 
 const documentsRoutes = require('./routes/documents.routes');
 
@@ -22,6 +24,16 @@ app.use(express.json());
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
+
+app.get('/openapi.yaml', (req, res) => {
+  res.sendFile(path.resolve(__dirname, '../../docs/openapi.yaml'));
+});
+
+app.use(
+  '/api-docs',
+  swaggerUi.serve,
+  swaggerUi.setup(null, { swaggerOptions: { url: '/openapi.yaml' } })
+);
 
 app.use(documentsRoutes);
 
