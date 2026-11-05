@@ -1,7 +1,6 @@
-// Seed do servidor backend do Document Management System.
+// Servidor backend do Document Management System.
 //
-// Este arquivo é apenas um ponto de partida mínimo. Ao longo do workshop você
-// vai usar o Agent Mode do GitHub Copilot para construir as camadas:
+// Camadas (Clean Architecture simples):
 //   - routes/       (definição das rotas)
 //   - controllers/  (entrada HTTP e validação)
 //   - services/     (regras de negócio)
@@ -11,16 +10,37 @@
 // usando multer com diskStorage. Não utilize provedores externos.
 
 const express = require('express');
+const path = require('node:path');
+const swaggerUi = require('swagger-ui-express');
+
+const documentsRoutes = require('./routes/documents.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// Endpoint de verificação de saúde. As demais rotas (/upload, /documents,
-// /documents/:id/download) serão implementadas durante o Passo 2.
+// Endpoint de verificação de saúde.
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
+});
+
+app.get('/openapi.yaml', (req, res) => {
+  res.sendFile(path.resolve(__dirname, '../../docs/openapi.yaml'));
+});
+
+app.use(
+  '/api-docs',
+  swaggerUi.serve,
+  swaggerUi.setup(null, { swaggerOptions: { url: '/openapi.yaml' } })
+);
+
+app.use(documentsRoutes);
+
+// Tratamento central de erros: não vaza detalhes internos ao cliente.
+app.use((err, req, res, next) => {
+  console.error('Erro inesperado:', err);
+  res.status(500).json({ error: 'Erro interno do servidor.' });
 });
 
 if (require.main === module) {
